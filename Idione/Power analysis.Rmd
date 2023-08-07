@@ -1,0 +1,631 @@
+---
+title: "Sample size determination"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(gtsummary)
+library(tidyverse)
+library(broom)
+```
+
+## Preliminary data
+
+```{r echo=FALSE}
+PrelimData<- readxl::read_excel("PrelimData_SendOut.xlsx",na = c("NA","QNS","."))
+
+
+
+PrelimData %>%
+  mutate(Log_total=log(`Total Iodine (ng/mL)`),Log_inorganic=log(`Inorganic Iodine (ng/mL)`)) %>% 
+  tbl_summary(
+    by = Group,
+    type = all_continuous() ~ "continuous2",
+    statistic = all_continuous() ~ c(
+      "{N_nonmiss}",
+      "{mean} ({sd})",
+      "{median} ({p25}, {p75})",
+      "{min}, {max}"
+    ),
+    missing = "no"
+  ) %>%
+  add_p(pvalue_fun = ~ style_pvalue(.x, digits = 2))
+
+```
+
+
+Since preliminary data is available. We try to utilize the preliminary data to decide the value of parameters we need in sample size calculation.
+
+For sample size calculation of continuous variable for two group comparison. We need these information (value of parameters): 1. Effect size(the clinical meaningful minimum difference between 2 groups). 2. standard deviation of each group (these number should represent the two group population variability).  3. Type I error try to control (typically 0.05). 4 The power try to achieve (typically 0.8)
+
+
+## Sample size based on preliminary derived values.
+
+### For  Total Iodine (ng/mL)
+
+Effect size: HT- N= 687-155
+sd for HT= 685
+sd for N = 173
+type I error=0.05
+power=0.8
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# install.packages("MESS")
+
+library(MESS)
+
+power_t_test(
+  n = NULL,
+  delta = 687-155,
+  sd = 173,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 685/173,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+
+
+
+```
+
+Each group only need 16
+
+
+### For  inorganic Iodine (ng/mL)
+
+Effect size: HT- N= 626-108=518
+sd for HT= 650
+sd for N = 153
+type I error=0.05
+power=0.8
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+power_t_test(
+  n = NULL,
+  delta = 626-108,
+  sd = 153,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio =650/153,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("classical"),
+  strict = TRUE
+)
+```
+
+Each group only need 15.
+
+
+Sample size is inversely related to effect size. The larger the effect size, the smaller sample size. The small sample size is most likely due to large effect size. If we assume the effect size according to preliminary data, any group difference smaller than that effect size will not have enough power to detect.
+
+
+
+
+## Visually examine distribution of preliminary data
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(PrelimData, aes(x=Group,y=`Total Iodine (ng/mL)`))+
+  geom_violin()+
+  geom_jitter(shape=16, position=position_jitter(0.1))
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(PrelimData, aes(x=Group,y=`Inorganic Iodine (ng/mL)`))+
+  geom_violin()+
+  geom_jitter(shape=16, position=position_jitter(0.1))
+
+
+```
+
+From the above visualizations, we notice that the distributions are skewed for both group on both measurements. One of the assumption for t test is normal distribution. 
+
+How about log transformation?
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(PrelimData, aes(x=Group,y=log(`Total Iodine (ng/mL)`)))+
+  geom_violin()+
+  geom_jitter(shape=16, position=position_jitter(0.1))
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(PrelimData, aes(x=Group,y=log(`Inorganic Iodine (ng/mL)`)))+
+  geom_violin()+
+  geom_jitter(shape=16, position=position_jitter(0.1))
+
+
+```
+
+The distribution is more normal now. However, the HT has much less data points. Is the HT data representative of population data???  
+
+
+## sample size on log scale based on preliminary data.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+power_t_test(
+  n = NULL,
+  delta = 5.88-4.84,
+  sd = 0.54,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 1.33/0.54,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+
+```
+
+Even log scale just 17.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+power_t_test(
+  n = NULL,
+  delta = 5.68-4.41,
+  sd = 0.63,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 1.47/0.63,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+
+```
+
+log scale need 14. 
+
+
+My question is: Is it common to in the literature analyze the log transform data?  
+
+
+The sample size based on preliminary data is pretty small. The preliminary data could be not representative of the population data. If we assume the effect size based preliminary data, anything difference smaller than that effect size will have not enough power to detect. For example, if we assume total iodnie is 687-155=532(from preliminary), the calucated required sample size is 16 per group to achieve 0.8 power. If the difference is under 532, we do not have enough power to detect. 
+
+
+
+532 is really a large effect size. 
+
+My question is that is this a minimal clinical meaningful effect size? Why we want to use meaningful effect size? Because this give use a conservative sample size(larger sample size). The smaller the effect size, the larger the samples size. When we planing a study, we try to be more conservative about sample size. We want as many samples as we can afford. This makes sure we have the maximum power. 
+
+
+
+I give some scenarios by change effect size and standard deviation to get conservative sample size below to show how these two parameters influence sample size. It is still recommended to check similar studies to get the minimal meaningful effect size.  
+
+
+
+
+## Sample size based on smaller effect size.
+
+I am giving sample size based on some smaller effect size to show how effect size influence the sample size. The standard deviations stay same.
+
+### For  Total Iodine (ng/mL)
+
+Effect size: HT- N= 100, 200, 300, 400
+sd for HT= 685
+sd for N = 173
+type I error=0.05
+power=0.8
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# install.packages("MESS")
+
+library(MESS)
+
+power_t_test(
+  n = NULL,
+  delta = 100,
+  sd = 173,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 685/173,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+
+power_t_test(
+  n = NULL,
+  delta = 200,
+  sd = 173,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 685/173,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+power_t_test(
+  n = NULL,
+  delta = 300,
+  sd = 173,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 685/173,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+power_t_test(
+  n = NULL,
+  delta = 400,
+  sd = 173,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 685/173,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+```
+If the effect size is 100, it requires 394 per group. If the effect size is 200, it requires 100 per group. If the effect size is 300, it requires 46. If the effect size is 400, it requires 27.
+
+
+### For  inorganic Iodine (ng/mL)
+
+Effect size: HT- N= 100, 200, 300, 400
+sd for HT= 650
+sd for N = 153
+type I error=0.05
+power=0.8
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+power_t_test(
+  n = NULL,
+  delta = 100,
+  sd = 153,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio =650/153,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("classical"),
+  strict = TRUE
+)
+
+power_t_test(
+  n = NULL,
+  delta = 200,
+  sd = 153,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio =650/153,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("classical"),
+  strict = TRUE
+)
+
+power_t_test(
+  n = NULL,
+  delta = 300,
+  sd = 153,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio =650/153,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("classical"),
+  strict = TRUE
+)
+
+power_t_test(
+  n = NULL,
+  delta = 400,
+  sd = 153,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio =650/153,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("classical"),
+  strict = TRUE
+)
+```
+If the effect size is 100, it requires 351 per group. If the effect size is 200, it requires 89 per group. If the effect size is 300, it requires 40. If the effect size is 400, it requires 23.
+
+
+Now we see how effect size influence sample size. It is still recommended to check similar studies to get the minimal meaningful effect size.  
+
+
+
+## Conservative sample size based on large standard deviation
+
+### For  Total Iodine (ng/mL)
+
+Effect size: HT- N= 687-155
+sd for HT= 685
+sd for N = 685
+type I error=0.05
+power=0.8
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# install.packages("MESS")
+
+library(MESS)
+
+power_t_test(
+  n = NULL,
+  delta = 687-155,
+  sd = 685,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio = 1,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("welch"),
+  strict = TRUE
+)
+
+```
+
+Using larger standard deviation, sample size becomes 28.
+
+
+### For  inorganic Iodine (ng/mL)
+
+Effect size: HT- N= 626-108=518
+sd for HT= 650
+sd for N = 650
+type I error=0.05
+power=0.8
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+power_t_test(
+  n = NULL,
+  delta = 626-108,
+  sd = 650,
+  sig.level = 0.05,
+  power = 0.8,
+  ratio = 1,
+  sd.ratio =1,
+  type = c("two.sample"),
+  alternative = c("two.sided"),
+  df.method = c("classical"),
+  strict = TRUE
+)
+```
+
+Using larger standard deviation, the sample size is 26. 
+
+
+
+
+
+
+
+```{r eval=FALSE, include=FALSE}
+#not right
+
+ns <- c(seq(10,200,by=50))
+effect_size <- c(687-155)
+
+results <- matrix(nrow = 0,ncol = 3)
+
+for (i in seq_along(ns)) {
+  sample_size <- ns[i]
+  for (j in seq_along(effect_size)) {
+    effect <- effect_size[j]
+    sig_results <- c()
+    for (r in 1:500) {
+      # re-create the data every time
+      tib <- tibble(
+        X = rep(c("A","B"),each=ns[i])
+      ) %>%
+        mutate(Y = ifelse(X=="A",155+rnorm(sample_size/2, mean = 0, sd = 172),
+                          687+rnorm(sample_size/2, mean = 0, sd = 674))
+          
+        )
+      
+      
+      model=t.test(Y ~ X, data = tib, var.equal = FALSE)
+     
+      sig_results[r] <- tidy(model)$p.value <= .05
+    }
+    
+    results <- rbind(results, c(mean(sig_results), sample_size, effect))
+  }
+}
+resultsdf <- data.frame(results)
+```
+
+```{r eval=FALSE, include=FALSE}
+ns <- c(seq(10,200,by=50))
+effect_size <- c(687-155)
+
+
+
+# X<-155+rnorm(20/2, mean = 0, sd = 172)
+# 
+# Y<-687+rnorm(20/2, mean = 0, sd = 674)
+# 
+# 
+# t.test(X,Y)$p.value
+
+sim_power <- function(samplesize){
+  sim <- replicate(n = 1000, expr = {
+  X<-155+rnorm(samplesize/2, mean = 0, sd = 172)
+  Y<-687+rnorm(samplesize/2, mean = 0, sd = 674)
+  test <- t.test(X,Y)
+  test$p.value < 0.05
+  })
+mean(sim)
+}
+
+sample_size <- c(seq(10,40,by=1))
+power <- sapply(sample_size, sim_power)
+data.frame(sample_size, power)
+
+
+```
+
+```{r eval=FALSE, include=FALSE}
+
+
+
+
+# X<-155+rnorm(20/2, mean = 0, sd = 172)
+# 
+# Y<-687+rnorm(20/2, mean = 0, sd = 674)
+# 
+# 
+# t.test(X,Y)$p.value
+
+sim_power <- function(samplesize){
+  sim <- replicate(n = 1000, expr = {
+  X<-log(108)+rnorm(samplesize/2, mean = 0, sd = log(152))
+  Y<-log(626)+rnorm(samplesize/2, mean = 0, sd = log(650))
+  test <- t.test(X,Y)
+  test$p.value < 0.05
+  })
+mean(sim)
+}
+
+sample_size <- c(seq(40,400,by=20))
+power <- sapply(sample_size, sim_power)
+data.frame(sample_size, power)
+
+
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+#Log transformed
+#total 
+
+sim_power <- function(samplesize){
+  sim <- replicate(n = 1000, expr = {
+  X<-5.88+rnorm(samplesize/2, mean = 0, sd = 1.33)
+  Y<-4.84+rnorm(samplesize/2, mean = 0, sd = 0.54)
+  test <- t.test(X,Y)
+  test$p.value < 0.05
+  })
+mean(sim)
+}
+
+sample_size <- c(seq(25,45,by=1))
+power <- sapply(sample_size, sim_power)
+data.frame(sample_size, power)
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+#inorganic
+
+
+
+sim_power <- function(samplesize){
+  sim <- replicate(n = 1000, expr = {
+  X<-5.68+rnorm(samplesize/2, mean = 0, sd = 1.47)
+  Y<-4.41+rnorm(samplesize/2, mean = 0, sd = 0.63)
+  test <- t.test(X,Y)
+  test$p.value < 0.05
+  })
+mean(sim)
+}
+
+sample_size <- c(seq(25,45,by=1))
+power <- sapply(sample_size, sim_power)
+data.frame(sample_size, power)
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+
+
+results <- matrix(nrow = 0,ncol = 3)
+
+for (i in seq_along(ns)) {
+  sample_size <- ns[i]
+  for (j in seq_along(effect_size)) {
+    effect <- effect_size[j]
+    sig_results <- c()
+    for (r in 1:500) {
+      # re-create the data every time
+      tib <- tibble(
+        X = rep(c("A","B"),each=ns[i])
+      ) %>%
+        mutate(Y = ifelse(X=="A",Y=155+rnorm(sample_size/2, mean = 0, sd = 173),
+                          Y=687+rnorm(sample_size/2, mean = 0, sd = 674)
+          
+        )
+      
+      
+      model <- lm(Y ~ X, data = tib)
+     
+      sig_results[r] <- tidy(model)$p.value[2] <= .05
+    }
+    
+    results <- rbind(results, c(mean(sig_results), sample_size, effect))
+  }
+}
+resultsdf <- data.frame(results)
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+ggplot(PrelimData, aes(x= Group,y=`Inorganic Iodine (ng/mL)`))+
+  geom_boxplot()
+
+
+ggplot(PrelimData, aes(x= Group,y=log(`Inorganic Iodine (ng/mL)`)))+
+  geom_boxplot()
+```
+
