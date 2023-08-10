@@ -5,5 +5,8 @@
 *.html
 E-mail/
 Output/
+<<<<<<< HEAD
 Data/
+=======
+>>>>>>> 26b5d0c0e183f15500b49edb71f63ba336bc74bf
 /2nd_Set up folders_8_7_2023.qmd
