@@ -1,0 +1,279 @@
+---
+title: ""
+author: 
+  - name: Sichao Wang
+    email: wangsic1@msu.edu
+    affiliations: 
+      - name: Michigan State University, Center for Statistical Training and Consulting
+date: "`r format(Sys.time(), '%Y-%m-%d, %H:%M:%S %Z')`"
+format: 
+  html: 
+    toc: true 
+    toc-depth: 4
+    toc-location: left 
+    number-sections: true
+    number-depth: 4
+    code-fold: false 
+    code-tools: false 
+    embed-resources: true 
+    theme: default 
+execute: 
+  eval: true 
+  echo: false #fenced
+  output: true 
+  message: false 
+  warning: false 
+  error: false 
+  include: true 
+---
+
+# Project Overview:
+
+Title: 
+
+<p>
+
+Project PI's:
+
+<p>
+
+-   
+
+<p>
+
+
+CSTAT Personnel:
+
+<p>
+
+-   Sichao Wang, Ph.D.,
+
+<p>
+
+
+<h3>Introduction and PICO question:</h3>
+
+<p>
+
+```         
+        
+```
+
+
+<h3>Primary Objective:</h3>
+
+<p>
+
+**XXX** 
+<p>
+
+<h3>Summary of Study Design and Protocol:</h3>
+
+**Protocol**
+
+
+**Study selection and inclusion/exclusion criteria:**
+
+<p>
+
+
+
+<p>
+
+
+
+**Data extraction and quality assessment:**
+
+<p>
+
+
+
+**Data synthesis**
+
+<p>
+
+
+
+**References**
+
+<p>
+
+
+
+## Project Updates:
+
+
+
+
+
+```{r}
+#| label: load-packages
+#| include: false
+
+## file folder setup
+library(fs)   # creat folder dir_create()
+library(here) # easy to do cross reference in the project.
+
+
+## Data step
+library(readr)
+library(readxl)       # read_excel()
+library(tidyverse)   
+library(janitor)
+
+## IDA
+library(Hmisc)
+
+
+## Model
+library(meta)
+library(metafor)
+library(dmetar) #for find.outliers()
+
+library(lme4)
+library(glmmTMB) 
+library(broom)
+library(emmeans)
+
+
+## result reporting
+### graph
+library(ggplot2)
+
+
+### table
+library(gt)
+library(gtsummary)
+library(knitr)        # for kable()
+library(sjPlot)       # tab_model()
+
+set.seed(42004063)
+
+```
+
+```{r}
+#| label: setup-folder
+#| include: false
+
+# create the default folder/subfolder
+
+dir_create(here("Data"))  # store raw data, clean data. 
+dir_create(here("Data/Raw"))  
+dir_create(here("Data/Clean")) 
+
+dir_create(here("Documents"))  # all the docs
+dir_create(here("Code"))       # r code
+dir_create(here("E-mails"))    # correspondence
+
+# Declare location of this script relative to the project root directory.
+here::i_am(path = "Code/Tonometer reliability (C1231).qmd")  #save the qmd under code first and run this line.
+
+# dir_ls()    # briefly check
+# dir_tree()  # Show the tree, not necessary, takes time.
+# dir_tree("Data")
+
+```
+
+```{r}
+#| label: import-data
+#| include: false
+
+## Use gender as an example first.
+
+Dat_gender <- read_excel(here("Data/Raw/Barrett's esophagus metanalysis data sheets.xlsx"), 
+    sheet = "Gender", skip = 2) %>% 
+  clean_names() %>% 
+  rename(study="x1",male_BE="m_2",female_BE="f_3",male_EAC="m_4",female_EAC="f_5",male_CTR="m_6",female_CTR="f_7") %>%
+  mutate(year=str_extract(study, "\\d+"),author=str_extract(study, "[A-Za-z-]+"))
+
+# BE vs control
+
+Dat_gender_be<- Dat_gender %>% 
+  select(study,year,author,male_BE,male_CTR,female_BE,female_CTR) %>% 
+  drop_na(male_BE)
+
+# EAC vs control
+
+Dat_gender_eac<- Dat_gender %>% 
+  select(study,year,author,male_EAC,male_CTR,female_EAC,female_CTR) %>% 
+  drop_na(male_EAC)
+
+
+## Use BMI as an example first.
+
+Dat_bmi <- read_excel(here("Data/Raw/Barrett's esophagus metanalysis data sheets.xlsx"), 
+    sheet = "BMI", skip = 1) %>% 
+  clean_names() %>% 
+  rename(study="x1",bmi_low_BE="bmi_30_2",bmi_high_BE="bmi_30_3",bmi_low_EAC="bmi_30_4",bmi_high_EAC="bmi_30_5",bmi_low_CTR="bmi_30",bmi_high_CTR="bmi_30_7") %>% 
+  mutate(year=str_extract(study, "\\d+"),author=str_extract(study, "[A-Za-z-]+"))
+
+# BE vs control
+
+Dat_bmi_be<- Dat_bmi %>% 
+  select(study,year,author,bmi_low_BE,bmi_low_CTR,bmi_high_BE,bmi_high_CTR) %>% 
+  drop_na(bmi_low_BE,bmi_low_CTR)
+
+# EAC vs control
+# only one study not doable
+
+Dat_bmi_eac<- Dat_bmi %>% 
+  select(study,year,author,bmi_low_EAC,bmi_low_CTR,bmi_high_EAC,bmi_high_CTR) %>% 
+  drop_na(bmi_low_EAC)
+
+
+
+## Use tobacco use as an example first.
+
+Dat_tobacco <- read_excel(here("Data/Raw/Barrett's esophagus metanalysis data sheets.xlsx"), 
+    sheet = "Tobacco use",skip = 2) %>% clean_names() %>% rename(study="x1",smoker_BE="ever_smoker_2",nonsmoker_BE="non_smoker_3",smoker_EAC="ever_smoker",nonsmoker_EAC="non_smoker_5",smoker_CTR="ever_smoker_6",nonsmoker_CTR="non_smoker_7") %>% mutate(year=str_extract(study, "\\d+"),author=str_extract(study, "[A-Za-z-]+"))
+
+# BE vs control
+
+Dat_tobacco_be<- Dat_tobacco %>% select(study,year,author,smoker_BE,smoker_CTR,nonsmoker_BE,nonsmoker_CTR) %>% drop_na(smoker_BE,smoker_CTR)
+
+# EAC vs control
+# only one study not doable
+
+Dat_tobacco_eac<- Dat_tobacco %>% select(study,year,author,smoker_EAC,smoker_CTR,nonsmoker_EAC,nonsmoker_CTR) %>% drop_na(smoker_EAC,smoker_CTR)
+
+
+## Use refulx use as an example first.
+
+Dat_reflux <- read_excel(here("Data/Raw/Barrett's esophagus metanalysis data sheets.xlsx"), 
+    sheet = "Reflux",skip = 2) %>% clean_names() %>% rename(study="x1",week_BE="weekly_2",lessweek_BE="less_than_weekly_3",week_EAC="x4",lessweek_EAC="x5",week_CTR="weekly_6",lessweek_CTR="less_than_weekly_7") %>% mutate(year=str_extract(study, "\\d+"),author=str_extract(study, "[A-Za-z-]+"))
+
+# BE vs control
+
+Dat_reflux_be<- Dat_reflux %>% select(study,year,author,week_BE,week_CTR,lessweek_BE,lessweek_CTR) %>% drop_na(week_BE,week_CTR)
+
+# EAC vs control
+# only one study not doable
+
+Dat_reflux_eac<- Dat_reflux %>% select(study,year,author,week_EAC,week_CTR,lessweek_EAC,lessweek_CTR) %>% drop_na(week_EAC,week_CTR)
+
+
+## Use refulx use as an example first.
+
+Dat_alcohol <- read_excel(here("Data/Raw/Barrett's esophagus metanalysis data sheets.xlsx"), 
+    sheet = "Alcohol",skip = 2) %>% clean_names() %>% rename(study="x1",yes_BE="y_2",no_BE="n_3",yes_EAC="y_4",no_EAC="n_5",yes_CTR="y_6",no_CTR="n_7") %>% mutate(year=str_extract(study, "\\d+"),author=str_extract(study, "[A-Za-z-]+"))
+
+# BE vs control
+
+Dat_alcohol_be<- Dat_alcohol %>% select(study,year,author,yes_BE,yes_CTR,no_BE,no_CTR) %>% drop_na(yes_BE,yes_CTR)
+
+# EAC vs control
+# only one study not doable
+
+Dat_alcohol_eac<- Dat_alcohol %>% select(study,year,author,yes_EAC,yes_CTR,no_EAC,no_CTR) %>% drop_na(yes_EAC,yes_CTR)
+
+
+Dat_be<-Dat_gender_be %>% full_join(Dat_bmi_be) %>% full_join(Dat_tobacco_be) %>% full_join(Dat_reflux_be) %>% full_join(Dat_alcohol_be) %>% select(-c("year","author"))
+
+
+Dat_eac<-Dat_gender_eac %>% full_join(Dat_bmi_eac) %>% full_join(Dat_tobacco_eac) %>% full_join(Dat_reflux_eac) %>% full_join(Dat_alcohol_eac) %>% select(-c("year","author"))
+
+```
+
+# Statistical analysis
+
+## Initial Data Analysis (IDA)
